@@ -3,7 +3,7 @@ import * as ffmpeg from 'fluent-ffmpeg';
 import { TrimVideoDto } from './dto/trim-video.dto';
 import { ConcatVideoDto } from './dto/concat-video.dto';
 import { Video, Trim, Concat } from './entities/video.entity';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuid } from 'uuid';
 import { join } from 'path';
 import { promises as fs } from 'fs';
 
@@ -15,7 +15,7 @@ export class VideoService {
 
   async uploadVideo(file: Express.Multer.File): Promise<Video> {
     const video: Video = {
-      id: uuidv4(),
+      id: uuid(),
       originalName: file.originalname,
       path: file.path,
       mimeType: file.mimetype,
@@ -35,7 +35,7 @@ export class VideoService {
       throw new NotFoundException(`Video with id ${videoId} not found`);
     }
     const trim: Trim = {
-      id: uuidv4(),
+      id: uuid(),
       videoId,
       startTime,
       endTime,
@@ -48,7 +48,7 @@ export class VideoService {
   async concatVideos(concatVideoDto: ConcatVideoDto): Promise<Concat> {
     const { videoIds } = concatVideoDto;
     const concat: Concat = {
-      id: uuidv4(),
+      id: uuid(),
       videoIds,
     };
     this.concats.push(concat);
