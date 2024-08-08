@@ -24,6 +24,7 @@ export class VideoService {
       trims: [],
       concats: [],
     };
+
     this.videos.push(video);
     return video;
   }
@@ -31,15 +32,18 @@ export class VideoService {
   async trimVideo(trimVideoDto: TrimVideoDto): Promise<Trim> {
     const { videoId, startTime, endTime } = trimVideoDto;
     const video = this.getVideoById(videoId);
+
     if (!video) {
       throw new NotFoundException(`Video with id ${videoId} not found`);
     }
+
     const trim: Trim = {
       id: uuid(),
       videoId,
       startTime,
       endTime,
     };
+
     video.trims.push(trim);
     this.trims.push(trim);
     return trim;
@@ -47,23 +51,28 @@ export class VideoService {
 
   async concatVideos(concatVideoDto: ConcatVideoDto): Promise<Concat> {
     const { videoIds } = concatVideoDto;
+
     const concat: Concat = {
       id: uuid(),
       videoIds,
     };
+
     this.concats.push(concat);
     return concat;
   }
 
   async executeCommands(): Promise<string[]> {
     const outputFiles: string[] = [];
+
     for (const trim of this.trims) {
       const video = this.getVideoById(trim.videoId);
+
       if (video) {
         const outputFilePath = join(
           process.env.PROCESSED_DIR,
           `${trim.id}.mp4`,
         );
+
         await this.runFfmpegCommand(video.path, outputFilePath, [
           '-ss',
           trim.startTime,
@@ -72,6 +81,7 @@ export class VideoService {
           '-c',
           'copy',
         ]);
+
         outputFiles.push(outputFilePath);
       }
     }
@@ -80,10 +90,12 @@ export class VideoService {
       const inputFiles = concat.videoIds.map(
         (id) => this.getVideoById(id).path,
       );
+
       const outputFilePath = join(
         process.env.PROCESSED_DIR,
         `${concat.id}.mp4`,
       );
+
       await this.concatFfmpegCommand(inputFiles, outputFilePath);
       outputFiles.push(outputFilePath);
     }
@@ -91,7 +103,23 @@ export class VideoService {
     return outputFiles;
   }
 
-  async runFfmpegCommand(
+  async getVideos(): Promise<Video[]> {
+    return this.videos;
+  }
+
+  async getTrims(): Promise<Trim[]> {
+    return this.trims;
+  }
+
+  async getConcats(): Promise<Concat[]> {
+    return this.concats;
+  }
+
+  getVideoById(id: string): Video {
+    return this.videos.find((video) => video.id === id);
+  }
+
+  private async runFfmpegCommand(
     inputFile: string,
     outputFile: string,
     args: string[],
@@ -105,7 +133,7 @@ export class VideoService {
     });
   }
 
-  async concatFfmpegCommand(
+  private async concatFfmpegCommand(
     inputFiles: string[],
     outputFile: string,
   ): Promise<void> {
@@ -124,21 +152,5 @@ export class VideoService {
         .on('end', () => resolve())
         .on('error', (err) => reject(err));
     });
-  }
-
-  async getVideos(): Promise<Video[]> {
-    return this.videos;
-  }
-
-  async getTrims(): Promise<Trim[]> {
-    return this.trims;
-  }
-
-  async getConcats(): Promise<Concat[]> {
-    return this.concats;
-  }
-
-  getVideoById(id: string): Video {
-    return this.videos.find((video) => video.id === id);
   }
 }
