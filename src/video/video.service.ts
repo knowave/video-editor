@@ -57,6 +57,12 @@ export class VideoService {
       videoIds,
     };
 
+    for (const videoId of videoIds) {
+      const video = this.getVideoById(videoId);
+
+      if (video) video.concats.push(concat);
+    }
+
     this.concats.push(concat);
     return concat;
   }
