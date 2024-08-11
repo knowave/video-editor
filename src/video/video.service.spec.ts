@@ -43,7 +43,7 @@ describe('VideoService', () => {
 
       const result = await service.uploadVideo(mockFile);
 
-      console.log(result);
+      expect(service.getVideos()).resolves.toContainEqual(result);
     });
   });
 });
