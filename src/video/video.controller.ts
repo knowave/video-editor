@@ -7,11 +7,10 @@ import {
   Get,
   Param,
   Res,
-  NotFoundException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { VideoService } from './video.service';
 import { TrimVideoDto } from './dto/trim-video.dto';
 import { ConcatVideoDto } from './dto/concat-video.dto';
@@ -81,12 +80,8 @@ export class VideoController {
 
   @Get('download/:id')
   async downloadVideo(@Param('id') id: string, @Res() res: Response) {
-    const video = this.videoService.getVideoById(id);
+    const downloadPath = this.videoService.getDownloadVideo(id);
 
-    if (!video) {
-      throw new NotFoundException(`Video with id ${id} not found`);
-    }
-
-    res.download(video.path);
+    res.download(`${join(process.cwd(), downloadPath)}`);
   }
 }

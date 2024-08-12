@@ -6,13 +6,15 @@ import {
 import * as ffmpeg from 'fluent-ffmpeg';
 import { TrimVideoDto } from './dto/trim-video.dto';
 import { ConcatVideoDto } from './dto/concat-video.dto';
-import { Video, Trim, Concat } from './entities/video.entity';
+import { Video } from './entities/video.entity';
 import { v4 as uuid } from 'uuid';
 import { extname, join } from 'path';
 import { promises as fs } from 'fs';
 import { exec } from 'child_process';
 import { BatchOperationDto } from './dto/batch-operation.dto';
 import { OperationType } from './enums/operation-type.enum';
+import { Trim } from './entities/trim.entity';
+import { Concat } from './entities/concat.entity';
 
 @Injectable()
 export class VideoService {
@@ -29,7 +31,7 @@ export class VideoService {
       size: file.size,
       uploadDate: new Date(),
       trims: [],
-      concats: [],
+      concat: null,
     };
 
     this.videos.push(video);
@@ -53,7 +55,7 @@ export class VideoService {
       endTime,
     };
 
-    const outputDirectory = './processed';
+    const outputDirectory = './uploads';
     const outputFilePath = join(
       outputDirectory,
       `${trim.id}${extname(video.path)}`,
@@ -90,13 +92,18 @@ export class VideoService {
     };
 
     const videos = videoIds.map((id) => {
-      const video = this.getVideoById(id);
+      const video = this.getVideoOrTrim(id);
 
       if (!video) throw new NotFoundException(`Video with id ${id} not found`);
 
-      video.concats.push(concat);
+      if (this.isVideo(video) && video.trims.length > 0) {
+        video.concat = concat;
+      } else if (!this.isVideo(video) && video.videoId) {
+        return this.getVideoById(video.videoId);
+      }
+
       return video;
-    });
+    }) as Video[];
 
     if (videos.length !== videoIds.length) {
       const missingIds = videoIds.filter((videoId) =>
@@ -108,17 +115,15 @@ export class VideoService {
       );
     }
 
-    const outputDirectory = './processed';
     const temporaryFilePath = join('./uploads', `${concat.id}_list.txt`);
     const fileListContent = videos
       .map((video) => `file '${join(process.cwd(), video.path)}'`)
       .join('\n');
 
-    await fs.mkdir(outputDirectory, { recursive: true });
     await fs.writeFile(temporaryFilePath, fileListContent);
 
     const outputFilePath = join(
-      outputDirectory,
+      './uploads',
       `${concat.id}${extname(videos[0].path)}`,
     );
 
@@ -162,6 +167,16 @@ export class VideoService {
     return allSucceeded;
   }
 
+  getDownloadVideo(id: string): string {
+    const video = this.getVideoById(id);
+
+    if (!video) {
+      throw new NotFoundException(`Video with id ${id} not found`);
+    }
+
+    return video.path;
+  }
+
   async executeCommands(): Promise<string[]> {
     const outputFiles: string[] = [];
 
@@ -169,7 +184,7 @@ export class VideoService {
       const video = this.getVideoById(trim.videoId);
 
       if (video) {
-        const outputFilePath = join('./processed', `${trim.id}.mp4`);
+        const outputFilePath = join('./uploads', `${trim.id}.mp4`);
 
         await this.runFfmpegCommand(video.path, outputFilePath, [
           '-ss',
@@ -189,7 +204,7 @@ export class VideoService {
         (id) => this.getVideoById(id).path,
       );
 
-      const outputFilePath = join('./processed', `${concat.id}.mp4`);
+      const outputFilePath = join('./uploads', `${concat.id}.mp4`);
 
       await this.concatFfmpegCommand(inputFiles, outputFilePath);
       outputFiles.push(outputFilePath);
@@ -214,6 +229,19 @@ export class VideoService {
     return this.videos.find((video) => video.id === id);
   }
 
+  private getVideoOrTrim(id: string): Video | Trim {
+    const video = this.getVideoById(id);
+
+    if (video) {
+      return video;
+    } else {
+      return this.trims.find((trim) => trim.id === id);
+    }
+  }
+  private isVideo(entity: Video | Trim): entity is Video {
+    return (entity as Video).originalName !== undefined;
+  }
+
   private async runFfmpegCommand(
     inputFile: string,
     outputFile: string,
@@ -232,7 +260,7 @@ export class VideoService {
     inputFiles: string[],
     outputFile: string,
   ): Promise<void> {
-    const fileListPath = join('./processed', 'filelist.txt');
+    const fileListPath = join('./uploads', 'filelist.txt');
     await fs.writeFile(
       fileListPath,
       inputFiles.map((file) => `file '${file}'`).join('\n'),
