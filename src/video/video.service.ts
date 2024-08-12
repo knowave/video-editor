@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import * as ffmpeg from 'fluent-ffmpeg';
 import { TrimVideoDto } from './dto/trim-video.dto';
 import { ConcatVideoDto } from './dto/concat-video.dto';
@@ -75,16 +79,60 @@ export class VideoService {
   async concatVideos(concatVideoDto: ConcatVideoDto): Promise<Concat> {
     const { videoIds } = concatVideoDto;
 
+    if (videoIds.length === 0)
+      throw new BadRequestException('No videos to concatenate');
+
     const concat: Concat = {
       id: uuid(),
       videoIds,
     };
 
-    for (const videoId of videoIds) {
-      const video = this.getVideoById(videoId);
+    const videos = videoIds.map((id) => {
+      const video = this.getVideoById(id);
 
-      if (video) video.concats.push(concat);
+      if (!video) throw new NotFoundException(`Video with id ${id} not found`);
+
+      video.concats.push(concat);
+      return video;
+    });
+
+    if (videos.length !== videoIds.length) {
+      const missingIds = videoIds.filter((videoId) =>
+        videos.every((video) => video.id !== videoId),
+      );
+
+      throw new NotFoundException(
+        `Videos with ids ${missingIds.join(', ')} not found`,
+      );
     }
+
+    const outputDirectory = './processed';
+    const temporaryFilePath = join('./uploads', `${concat.id}_list.txt`);
+    const fileListContent = videos
+      .map((video) => `file '${join(process.cwd(), video.path)}'`)
+      .join('\n');
+
+    await fs.mkdir(outputDirectory, { recursive: true });
+    await fs.writeFile(temporaryFilePath, fileListContent);
+
+    const outputFilePath = join(
+      outputDirectory,
+      `${concat.id}${extname(videos[0].path)}`,
+    );
+
+    const command = `ffmpeg -f concat -safe 0 -i ${temporaryFilePath} -c copy ${outputFilePath}`;
+
+    await new Promise<void>((resolve, reject) => {
+      exec(command, (error) => {
+        if (error) {
+          reject(new Error(`Error concatenating videos: ${error.message}`));
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    await fs.unlink(temporaryFilePath);
 
     this.concats.push(concat);
     return concat;
