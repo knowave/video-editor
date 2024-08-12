@@ -6,7 +6,9 @@ import { v4 as uuid } from 'uuid';
 import { promises as fs } from 'fs';
 import { TrimVideoDto } from './dto/trim-video.dto';
 import { ConcatVideoDto } from './dto/concat-video.dto';
-import { Video, Trim, Concat } from './entities/video.entity';
+import { Video } from './entities/video.entity';
+import { Trim } from './entities/trim.entity';
+import { Concat } from './entities/concat.entity';
 
 jest.mock('fluent-ffmpeg');
 jest.mock('uuid', () => ({ v4: jest.fn() }));
