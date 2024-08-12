@@ -1,3 +1,6 @@
+import { Concat } from './concat.entity';
+import { Trim } from './trim.entity';
+
 export class Video {
   id: string;
   originalName: string;
@@ -6,17 +9,5 @@ export class Video {
   size: number;
   uploadDate: Date;
   trims: Trim[];
-  concats: Concat[];
-}
-
-export class Trim {
-  id: string;
-  videoId: string;
-  startTime: string;
-  endTime: string;
-}
-
-export class Concat {
-  id: string;
-  videoIds: string[];
+  concat: Concat;
 }
