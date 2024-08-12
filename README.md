@@ -12,3 +12,6 @@
     $ yarn install
     $ yarn start
     ```
+
+## API 문서 접속
+`localhost:8080/api`로 접속 시 모든 API에 대한 문서를 확인할 수 있다.
