@@ -16,6 +16,7 @@ import { VideoService } from './video.service';
 import { TrimVideoDto } from './dto/trim-video.dto';
 import { ConcatVideoDto } from './dto/concat-video.dto';
 import { Response } from 'express';
+import { BatchOperationDto } from './dto/batch-operation.dto';
 
 @Controller('videos')
 export class VideoController {
@@ -51,6 +52,11 @@ export class VideoController {
   @Post('concat')
   async concatVideos(@Body() concatVideoDto: ConcatVideoDto) {
     return await this.videoService.concatVideos(concatVideoDto);
+  }
+
+  @Post('batch-operation')
+  async batchOperation(@Body() batchOperationsDto: BatchOperationDto[]) {
+    return await this.videoService.batchOperation(batchOperationsDto);
   }
 
   @Post('execute')

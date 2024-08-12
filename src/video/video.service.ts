@@ -11,6 +11,8 @@ import { v4 as uuid } from 'uuid';
 import { extname, join } from 'path';
 import { promises as fs } from 'fs';
 import { exec } from 'child_process';
+import { BatchOperationDto } from './dto/batch-operation.dto';
+import { OperationType } from './enums/operation-type.enum';
 
 @Injectable()
 export class VideoService {
@@ -136,6 +138,28 @@ export class VideoService {
 
     this.concats.push(concat);
     return concat;
+  }
+
+  async batchOperation(
+    batchOperationsDto: BatchOperationDto[],
+  ): Promise<boolean> {
+    const results = [];
+
+    for (const batchOperationDto of batchOperationsDto) {
+      const { type, trim, concat } = batchOperationDto;
+
+      if (type === OperationType.TRIM) {
+        await this.trimVideo(trim);
+      } else if (type === OperationType.CONCAT) {
+        await this.concatVideos(concat);
+      }
+
+      results.push(true);
+    }
+
+    const allSucceeded = results.every((result) => result);
+
+    return allSucceeded;
   }
 
   async executeCommands(): Promise<string[]> {

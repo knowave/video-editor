@@ -1,12 +1,14 @@
-import { IsArray, IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsNotEmpty } from 'class-validator';
 import { OperationType } from '../enums/operation-type.enum';
+import { TrimVideoDto } from './trim-video.dto';
+import { ConcatVideoDto } from './concat-video.dto';
 
 export class BatchOperationDto {
   @IsNotEmpty()
   @IsEnum(OperationType)
   type: OperationType;
 
-  @IsNotEmpty()
-  @IsArray()
-  data: any[];
+  trim?: TrimVideoDto;
+
+  concat?: ConcatVideoDto;
 }
